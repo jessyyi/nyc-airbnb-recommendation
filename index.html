@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>纽约 Airbnb 房源数据分析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F0E7; --surface:#FCFAF4; --surface2:#F0EBDF;
+  --ink:#27231C; --ink2:#5F584C; --ink3:#8C8475;
+  --line:rgba(39,35,28,.12); --line2:rgba(39,35,28,.2);
+  --teal:#1D9E75; --teal-d:#0F6E56; --teal-bg:#E4F3EC;
+  --coral:#D85A30; --coral-d:#993C1D; --coral-bg:#FAEAE2;
+  --purple:#6A5ECF; --purple-d:#4339A0; --purple-bg:#EDEAFB;
+  --blue:#2F7FCC; --green:#5E9120; --amber:#D98D14; --gray:#8C857A;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans SC",sans-serif;font-size:16px;line-height:1.78;-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:56px 28px 80px}
+h1,h2,h3,.serif{font-family:"Noto Serif SC",serif;font-weight:600;letter-spacing:.2px}
+code{font-family:"JetBrains Mono",monospace;font-size:.86em;background:var(--surface2);border:.5px solid var(--line);border-radius:5px;padding:.08em .42em;color:var(--coral-d)}
+em{font-style:normal;font-weight:500;color:var(--ink)}
+
+.kicker{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-d)}
+.hero{display:flex;gap:28px;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:34px}
+.hero h1{font-size:40px;line-height:1.22;margin:14px 0 16px}
+.hero .lede{font-size:18px;color:var(--ink2);max-width:62ch}
+.hero .lede b{color:var(--ink);font-weight:500}
+.glyph{flex:none;margin-top:6px}
+.stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.stat{background:var(--surface);border:.5px solid var(--line);border-radius:12px;padding:12px 16px;min-width:120px}
+.stat .l{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.06em;color:var(--ink3);text-transform:uppercase}
+.stat .v{font-family:"Noto Serif SC",serif;font-weight:600;font-size:23px;margin-top:2px}
+.stat .v.warn{color:var(--coral-d)} .stat .v.ok{color:var(--teal-d)}
+
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 11px;border-radius:999px;letter-spacing:.04em}
+.tag::before{content:"";width:7px;height:7px;border-radius:50%}
+.tag-enc{background:var(--teal-bg);color:var(--teal-d)} .tag-enc::before{background:var(--teal)}
+.tag-bot{background:var(--coral-bg);color:var(--coral-d)} .tag-bot::before{background:var(--coral)}
+.tag-dec{background:var(--purple-bg);color:var(--purple-d)} .tag-dec::before{background:var(--purple)}
+.tag-ext{background:#E4EEF8;color:#1F5E9E} .tag-ext::before{background:var(--blue)}
+
+.guide{margin-top:44px}
+.guide > h2{font-size:24px;margin-bottom:6px}
+.guide > p{color:var(--ink2);margin-bottom:20px}
+.guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.gcard{background:var(--surface);border:.5px solid var(--line);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
+.gcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac,var(--teal))}
+.gcard .gtop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.gcard .gnum{font-family:"JetBrains Mono",monospace;font-weight:500;font-size:13px;color:var(--ink3)}
+.gcard h3{font-size:17px;line-height:1.4}
+.gcard p{font-size:13.5px;color:var(--ink2);line-height:1.6;margin-top:5px}
+
+.board{margin-top:52px;scroll-margin-top:20px}
+.board-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.board-head .num{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ink3);letter-spacing:.05em}
+.board h2{font-size:27px;margin:12px 0 0}
+.what{margin:14px 0 18px;background:var(--surface);border:.5px solid var(--line);border-left:4px solid var(--ac,var(--teal));border-radius:0 10px 10px 0;padding:12px 16px}
+.what .wl{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ac,var(--teal-d));display:block;margin-bottom:3px}
+.what p{font-size:15px;color:var(--ink2)}
+.board p{margin:12px 0}
+.board ul{list-style:none;margin:14px 0;padding:0}
+.board ul li{position:relative;padding-left:22px;margin:10px 0;color:var(--ink2)}
+.board ul li::before{content:"";position:absolute;left:4px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--ac,var(--teal))}
+.board ul li b{color:var(--ink);font-weight:500}
+
+figure{margin:22px 0;background:var(--surface);border:.5px solid var(--line);border-radius:16px;padding:18px 18px 14px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px;font-size:12.5px;color:var(--ink2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;flex:none}
+.chartbox{position:relative;width:100%}
+figcaption{font-size:12.5px;color:var(--ink3);line-height:1.6;margin-top:12px;border-top:.5px solid var(--line);padding-top:10px}
+
+.segbar{display:flex;width:100%;height:54px;border-radius:10px;overflow:hidden;font-size:13px;font-weight:500}
+.segbar div{display:flex;align-items:center;justify-content:center}
+.seglg{display:flex;flex-direction:column;gap:9px;margin-top:16px;font-size:13.5px;color:var(--ink2)}
+.seglg span{display:flex;align-items:center;gap:9px}
+.seglg i{width:12px;height:12px;border-radius:3px;flex:none}
+.seglg b{color:var(--ink);font-weight:500;font-family:"JetBrains Mono",monospace}
+
+.ins{display:grid;gap:12px;margin-top:18px}
+.ins .item{background:var(--surface);border:.5px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;gap:16px;align-items:flex-start}
+.ins .n{font-family:"Noto Serif SC",serif;font-weight:600;font-size:26px;color:var(--coral);line-height:1;flex:none;width:30px}
+.ins .item p{margin:0;color:var(--ink2)}
+.ins .item p b{color:var(--ink);font-weight:500}
+
+.steps{margin-top:16px}
+.step{border-left:3px solid var(--purple);background:var(--surface);border-radius:0 10px 10px 0;padding:13px 18px;margin:10px 0}
+.step .st{font-family:"Noto Serif SC",serif;font-weight:600;font-size:15px;color:var(--purple-d);margin-bottom:3px}
+.step p{margin:0;color:var(--ink2);font-size:14.5px;line-height:1.7}
+
+footer{margin-top:64px;border-top:1px solid var(--line);padding-top:22px;color:var(--ink3);font-size:13px;line-height:1.8}
+footer b{color:var(--ink2);font-weight:500}
+
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.reveal{opacity:0;animation:fu .7s cubic-bezier(.2,.7,.2,1) forwards}
+@media (prefers-reduced-motion:reduce){.reveal{animation:none;opacity:1}html{scroll-behavior:auto}}
+@media (max-width:680px){
+  .hero{flex-direction:column}.hero h1{font-size:31px}.glyph{order:-1}
+  .guide-grid{grid-template-columns:1fr}.wrap{padding:36px 18px 60px}
+}
+
+/* 个性化推荐面板 */
+.reco-panel{background:var(--surface);border:.5px solid var(--line);border-radius:16px;padding:18px;margin:18px 0}
+.reco-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.reco-field label{display:block;font-size:12px;color:var(--ink3);margin-bottom:4px;font-family:"JetBrains Mono",monospace}
+.reco-field input,.reco-field select{width:100%;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:#fff;color:var(--ink);font:inherit}
+.reco-btn{margin-top:14px;border:0;border-radius:999px;background:var(--purple);color:white;padding:10px 18px;font-weight:600;cursor:pointer}
+.reco-btn:hover{filter:brightness(.95)}
+.reco-explain{font-size:13.5px;color:var(--ink2);background:var(--purple-bg);border-radius:12px;padding:12px 14px;margin-top:14px}
+.reco-table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13.5px;background:var(--surface);border-radius:14px;overflow:hidden}
+.reco-table th,.reco-table td{border-bottom:.5px solid var(--line);padding:10px 9px;text-align:left;vertical-align:top}
+.reco-table th{color:var(--ink3);font-family:"JetBrains Mono",monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:var(--surface2)}
+.score-pill{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--teal-bg);color:var(--teal-d);font-family:"JetBrains Mono",monospace;font-weight:600}
+.reason{color:var(--ink2);font-size:13px;line-height:1.5}
+@media (max-width:680px){.reco-grid{grid-template-columns:1fr}.reco-table{font-size:12px}}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero reveal">
+    <div>
+      <span class="kicker">探索性数据分析 · 已完成部分</span>
+      <h1>纽约 Airbnb<br>房源数据分析</h1>
+      <p class="lede">基于 Inside Airbnb 纽约房源数据,从数据概览出发,逐层深入到单变量、双变量、多维交叉,最后收敛为洞察与行动。<b>整租房源和曼哈顿房源价格更高;但全市真正在运营的房源只有约 28%。</b></p>
+    </div>
+    <svg class="glyph" width="92" height="64" viewBox="0 0 120 84" aria-hidden="true">
+      <path d="M18 14 C18 70, 102 70, 102 14" fill="none" stroke="var(--line2)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="18" cy="14" r="7" fill="var(--teal)"/>
+      <circle cx="60" cy="56" r="7" fill="var(--coral)"/>
+      <circle cx="102" cy="14" r="7" fill="var(--purple)"/>
+    </svg>
+  </header>
+
+  <div class="stats reveal" style="animation-delay:.06s">
+    <div class="stat"><div class="l">房源数</div><div class="v">36,445</div></div>
+    <div class="stat"><div class="l">均价</div><div class="v">$132</div></div>
+    <div class="stat"><div class="l">真活跃占比</div><div class="v ok">28.3%</div></div>
+    <div class="stat"><div class="l">僵尸库存</div><div class="v warn">32.4%</div></div>
+  </div>
+
+  <section class="guide reveal" style="animation-delay:.12s">
+    <h2>报告导览</h2>
+    <p>报告分六块,沿"先理解、再探索、后结论"的顺序逐层深入；末尾另有一块<b>延伸分析</b>,在合并更多数据后展开。颜色标明阶段：<span class="tag tag-enc">探索分析</span> <span class="tag tag-bot">核心洞察</span> <span class="tag tag-dec">行动建议</span> <span class="tag tag-ext">延伸分析</span></p>
+    <div class="guide-grid">
+      <a class="gcard" href="#b0" style="--ac:var(--teal)"><div class="gtop"><span class="gnum">01</span><span class="tag tag-enc">探索</span></div><h3>数据概览与质量</h3><p>先认清数据本身——规模、字段、一行代表什么、质量如何。</p></a>
+      <a class="gcard" href="#b1" style="--ac:var(--teal)"><div class="gtop"><span class="gnum">02</span><span class="tag tag-enc">探索</span></div><h3>单变量分析</h3><p>逐个字段看分布,掌握每个变量的基本形态。</p></a>
+      <a class="gcard" href="#b2" style="--ac:var(--teal)"><div class="gtop"><span class="gnum">03</span><span class="tag tag-enc">探索</span></div><h3>双变量分析</h3><p>两两字段看关系——价格、地段、房型之间怎么联动。</p></a>
+      <a class="gcard" href="#b3" style="--ac:var(--teal)"><div class="gtop"><span class="gnum">04</span><span class="tag tag-enc">探索</span></div><h3>多维交叉与分群</h3><p>多个维度一起看,把房源切成可识别的群体。</p></a>
+      <a class="gcard" href="#bk" style="--ac:var(--coral)"><div class="gtop"><span class="gnum">05</span><span class="tag tag-bot">洞察</span></div><h3>核心洞察</h3><p>把前面的规律收敛成几条关键结论。</p></a>
+      <a class="gcard" href="#bd" style="--ac:var(--purple)"><div class="gtop"><span class="gnum">06</span><span class="tag tag-dec">行动</span></div><h3>行动建议</h3><p>把结论落成可执行的动作,每条都扣回具体数字。</p></a>
+      <a class="gcard" href="#ext" style="--ac:var(--blue);grid-column:1/-1"><div class="gtop"><span class="gnum">07 — 11 · 延伸</span><span class="tag tag-ext">进阶</span></div><h3>接入房东 / 合规 / 可达性数据</h3><p>把另一份同源数据无损合并进来,解锁原始字段做不到的「价格 × 房东 × 合规 × 地段」交叉:Superhost 溢价、房东商业化、地理可达性定价、评分拆解、综合推荐榜。</p></a>
+    </div>
+  </section>
+
+  <!-- 01 数据概览 -->
+  <section class="board reveal" id="b0" style="--ac:var(--teal);animation-delay:.04s">
+    <div class="board-head"><span class="tag tag-enc">探索</span><span class="num">01</span></div>
+    <h2>数据概览与质量</h2>
+    <div class="what"><span class="wl">这一板块做什么</span><p>拿到数据先认清它本身：规模、字段、一行代表什么、质量如何。后面所有分析都建立在这一步之上。</p></div>
+    <ul>
+      <li><b>粒度与主键。</b>一行一个房源,共 36,445 行。注意 <code>id</code> 列被 float64 精度损坏(房源 id 量级约 1.6×10¹⁸,超出安全整数范围,17,064 个 id 因此撞车),应改用 <code>listing_url</code> 当主键(36,445 个真唯一)。</li>
+      <li><b>价格概览。</b>价格区间 $93–300,均价 $132、中位 $120,分布高度集中——42.6% 的房源正好是 $120,高于 $200 的仅 8.3%(见下图)。</li>
+      <li><b>地段与房型字段齐全</b>(行政区、社区、经纬度、房型、容量),可支撑地理与房型维度的分析。</li>
+      <li><b>缺失是结构性的。</b>70.5% 的房源近一年零评论,其中约 45% 连评分、月评论都为空；<code>bedrooms</code> 缺 16%,<code>beds</code>/<code>bathrooms</code> 缺约 40%。缺失本身就是"不活跃"的信号,不宜无脑插补。</li>
+    </ul>
+    <figure>
+      <div class="chartbox" style="height:300px"><canvas id="c1" role="img" aria-label="价格分布：绝大多数房源落在115到120美元，中位120美元，高于200美元的仅占8.3%。">价格高度集中在 $115–120。</canvas></div>
+      <figcaption>图 1 · 价格分布。绝大多数房源落在 $115–120,中位 $120;高价房源(&gt;$200)仅占 8.3%。取值较集中,做分组比较时看均价比看中位更能拉开差异。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 02 单变量 -->
+  <section class="board reveal" id="b1" style="--ac:var(--teal)">
+    <div class="board-head"><span class="tag tag-enc">探索</span><span class="num">02</span></div>
+    <h2>单变量分析</h2>
+    <div class="what"><span class="wl">这一板块做什么</span><p>逐个字段单独看分布,掌握每个变量的基本形态,为后面的关系分析打底。</p></div>
+    <ul>
+      <li><b>地段高度集中。</b>曼哈顿 44.9% + 布鲁克林 36.4% ≈ 八成；皇后区 14.6%,布朗克斯 3.1%,史泰登岛 1.0%。</li>
+      <li><b>房型近乎二元。</b>整租房源 53.3% vs 独立房间 45.1%,酒店 + 合住合计不到 2%。</li>
+      <li><b>容量偏小。</b><code>accommodates</code> 中位 2(近一半房源就是 2 人),中位 1 间卧室。</li>
+      <li><b>可订性两极分化。</b><code>availability_365</code> 有 33.5% 是 0(未来一年完全不可订),又有 36% 落在 181–364 天的高可订区。一边死库存,一边几乎全年挂着。</li>
+      <li><b>活动度普遍极低。</b>近 12 月评论中位为 0,70.5% 的房源近一年零评论；有评分的房源中位 4.86(高分通胀明显)。</li>
+    </ul>
+  </section>
+
+  <!-- 03 双变量 -->
+  <section class="board reveal" id="b2" style="--ac:var(--teal)">
+    <div class="board-head"><span class="tag tag-enc">探索</span><span class="num">03</span></div>
+    <h2>双变量分析</h2>
+    <div class="what"><span class="wl">这一板块做什么</span><p>把字段两两组合看关系——价格、地段、房型、可订性之间怎么联动。</p></div>
+    <p><b>价格随地段和房型变化。</b>整租房源在每个区都比独立房间贵约 15–30%；分区看,曼哈顿整体均价最高($139),皇后区最低($121)。两者叠加,曼哈顿整租均价 $147,而皇后区独立房间只有 $114。</p>
+    <figure>
+      <div class="legend">
+        <span><i style="background:#1D9E75"></i>整租房源</span>
+        <span><i style="background:#7F77DD"></i>独立房间</span>
+      </div>
+      <div class="chartbox" style="height:300px"><canvas id="cp" role="img" aria-label="各行政区按房型的均价：整租房源在每个区都高于独立房间，曼哈顿整租均价147美元最高。">整租房源在每个区都比独立房间贵。</canvas></div>
+      <figcaption>图 2 · 各行政区 × 房型 的均价。整租房源处处高于独立房间;史泰登岛、布朗克斯样本量小,均价波动较大,仅供参考。</figcaption>
+    </figure>
+    <p><b>房型构成也随地段变化。</b>曼哈顿整租占 64%(全市最高),越往外围越以独立房间为主(皇后、布朗克斯整租仅约 36%)——曼哈顿是"整租公寓"市场,外围是"分租房间"市场。</p>
+    <figure>
+      <div class="legend">
+        <span><i style="background:#1D9E75"></i>整租 (左)</span>
+        <span><i style="background:#7F77DD"></i>独立房间 (中)</span>
+        <span><i style="background:#B4B2A9"></i>酒店 / 合住 (右)</span>
+      </div>
+      <div class="chartbox" style="height:300px"><canvas id="c2" role="img" aria-label="五个行政区的房型构成百分比堆叠条。曼哈顿整租占64%最高，皇后区和布朗克斯以独立房间为主约62%。">曼哈顿整租占比最高，外围以独立房间为主。</canvas></div>
+      <figcaption>图 3 · 各行政区按房型构成(每行占比 100%)。</figcaption>
+    </figure>
+    <ul>
+      <li><b>活跃房源是少数。</b>把"可订(<code>availability_365</code>&gt;0)且近一年被订过(<code>number_of_reviews_ltm</code>&gt;0)"定义为活跃,只有 28.3% 满足；而且活跃率在各区(27–36%)、各房型(都约 28%)之间几乎一样平。</li>
+      <li><b>活跃房源内部出现反转。</b>曼哈顿活跃房源的月评论中位最低(0.44),布鲁克林 / 皇后区更高(约 0.9)——曼哈顿高单价、低翻台,外围高翻台。</li>
+      <li><b>房源最密的社区：</b>Bed-Stuy、Midtown、Williamsburg、Harlem、Hell's Kitchen(布鲁克林与曼哈顿核心交替)。</li>
+    </ul>
+  </section>
+
+  <!-- 04 多维分群 -->
+  <section class="board reveal" id="b3" style="--ac:var(--teal)">
+    <div class="board-head"><span class="tag tag-enc">探索</span><span class="num">04</span></div>
+    <h2>多维交叉与分群</h2>
+    <div class="what"><span class="wl">这一板块做什么</span><p>多个维度一起看,把房源切成可识别的群体,看清结构。</p></div>
+    <p>用"可订性 × 近期活动"两个维度,把全部 36,445 个房源切成四群：</p>
+    <figure>
+      <div class="segbar">
+        <div style="width:28.3%;background:#5E9120;color:#173404">28.3%</div>
+        <div style="width:38.1%;background:#D98D14;color:#412402">38.1%</div>
+        <div style="width:1.1%;background:#2F7FCC"></div>
+        <div style="width:32.4%;background:#B4B2A9;color:#2C2C2A">32.4%</div>
+      </div>
+      <div class="seglg">
+        <span><i style="background:#5E9120"></i>真活跃 · 可订且近一年被订过 — <b>10,327</b></span>
+        <span><i style="background:#D98D14"></i>挂着没人订 · 可订但近一年零评论 — <b>13,903</b></span>
+        <span><i style="background:#2F7FCC"></i>订满 / 暂停 · 不可订但有近评 — <b>415</b></span>
+        <span><i style="background:#B4B2A9"></i>僵尸 · 不可订且近一年零评论 — <b>11,800</b></span>
+      </div>
+      <figcaption>图 4 · 全部房源按"可订性 × 近一年是否被订过"分成四群。真活跃(绿)仅占 28.3%。</figcaption>
+    </figure>
+    <ul>
+      <li><b>真活跃只占 28.3%。</b>最大的一群(38.1%)是"可订但近一年零评论"——挂在平台上却没人订(其中混着少量新上架房源)；32.4% 是彻底的僵尸；"订满 / 暂停"仅 1.1%,可忽略。</li>
+      <li><b>这个分布在 房型 × 行政区 的每个格子里都相近</b>(活跃率全在 26–36%)。正常市场波动会让僵尸集中在某些差地段或差房型；它如此均匀,更像一次全市性政策冲击的结果。</li>
+    </ul>
+  </section>
+
+  <!-- 05 核心洞察 -->
+  <section class="board reveal" id="bk" style="--ac:var(--coral)">
+    <div class="board-head"><span class="tag tag-bot">洞察</span><span class="num">05</span></div>
+    <h2>核心洞察</h2>
+    <div class="what"><span class="wl">这一板块做什么</span><p>把前面四块的规律收敛成几条解释现象的关键结论。</p></div>
+    <div class="ins">
+      <div class="item"><div class="n">1</div><p><b>价格结构清晰但温和。</b>整租处处高于独立房间,曼哈顿整体最高($139);但价格高度集中在 $120 附近,高价长尾很薄(&gt;$200 仅 8.3%)——这是一个"中端为主、溢价有限"的市场。</p></div>
+      <div class="item"><div class="n">2</div><p><b>房源数严重高估了真实市场。</b>36k 房源里只有约 1 万(28%)真正在运营,最大群体是挂着却从未成交的房源。</p></div>
+      <div class="item"><div class="n">3</div><p><b>僵尸化是全市均匀的。</b>这与 2023 年 9 月生效的纽约《本地法 18 号》(短租登记法,未登记房源基本无法合法做 30 晚以下短租)高度吻合——大量未登记房源沦为死库存,横跨所有行政区与房型。<i>(基于数据形态 + 已知监管的推断。)</i></p></div>
+      <div class="item"><div class="n">4</div><p><b>真正在跑的是一个更小、集中、二元的市场：</b>曼哈顿核心 + 布鲁克林为主、整租与独立房间各半、多为 2 人小户;曼哈顿高价低翻台,外围高翻台。</p></div>
+    </div>
+  </section>
+
+  <!-- 06 行动建议 -->
+  <section class="board reveal" id="bd" style="--ac:var(--purple)">
+    <div class="board-head"><span class="tag tag-dec">行动</span><span class="num">06</span></div>
+    <h2>行动建议</h2>
+    <div class="what"><span class="wl">这一板块做什么</span><p>把结论落成可执行动作,每条都扣回上面具体的数字与字段。</p></div>
+    <div class="steps">
+      <div class="step"><div class="st">① 分析前先理清字段</div><p>用 <code>listing_url</code> 当主键(避免 <code>id</code> 精度撞车);几列派生的辅助字段(<code>dominant_*</code>、<code>external_sample_count</code>)在房源级分析里可忽略。</p></div>
+      <div class="step"><div class="st">② 市场 / 运营分析先过滤到活跃房源</div><p>用 <code>active = availability_365&gt;0 且 number_of_reviews_ltm&gt;0</code> 过滤到约 1.03 万房源再分析,别用 36k 全量(会被 72% 的死库存稀释)。active 是真运营的下限:桶 B 里混着新房源。</p></div>
+      <div class="step"><div class="st">③ 价格分析用均价、按房型 × 地段拆</div><p>价格取值集中在 $120,中位会被尖峰主导,做分组比较时优先看均价;重点看整租溢价(每区 +15–30%)和分区差异(曼哈顿最高)。</p></div>
+      <div class="step"><div class="st">④ 供给 / 监管视角用全量</div><p>看死库存占比(约 72%)及其在各区各房型的均匀性,作为政策影响的指标。</p></div>
+      <div class="step"><div class="st">⑤ 地理投放</div><p>活市场集中在曼哈顿核心(Midtown、Hell's Kitchen、UWS、UES、East Village)和布鲁克林(Bed-Stuy、Williamsburg、Bushwick、Crown Heights);曼哈顿打整租高端低频,布鲁克林 / 皇后区打高频。</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 延伸分析 · 合并更多数据 ============ -->
+  <section class="board reveal" id="ext" style="--ac:var(--blue);border-top:1px solid var(--line);margin-top:72px;padding-top:50px">
+    <span class="kicker" style="color:var(--blue)">延伸分析 · 接入更多数据</span>
+    <h2 style="font-size:30px;margin:12px 0 0">合并房东 / 合规 / 可达性数据之后</h2>
+    <div class="what" style="--ac:var(--blue)"><span class="wl">这一部分做什么</span><p>原报告只用精简表(22 列)。这里把<b>另一份同源 Inside Airbnb 数据</b>(同样这 36,445 个房源,但保留了 <code>host_id</code>、<code>license</code>、细分评分等字段)按 <code>listing_url</code> 提取的真实 id <b>无损合并</b>进来——36,445 行全部一一对齐、零丢失——从而能做原表字段不支持的「<b>价格 × 房东 / 合规 / 地理可达性</b>」交叉分析。</p></div>
+    <div class="stats" style="margin-top:18px">
+      <div class="stat"><div class="l">合并后字段</div><div class="v">38</div></div>
+      <div class="stat"><div class="l">行对齐</div><div class="v ok">36,445</div></div>
+      <div class="stat"><div class="l">新增维度</div><div class="v">房东 · 合规 · 地段</div></div>
+    </div>
+  </section>
+
+  <!-- 07 Superhost 溢价 -->
+  <section class="board reveal" style="--ac:var(--blue)">
+    <div class="board-head"><span class="tag tag-ext">进阶</span><span class="num">07</span></div>
+    <h2>Superhost 真的更贵吗</h2>
+    <div class="what" style="--ac:var(--blue)"><span class="wl">这一板块做什么</span><p>把价格(原表)与 <code>host_is_superhost</code>(新接入)交叉,看"超赞房东"标签是否对应更高标价。</p></div>
+    <ul>
+      <li><b>整体几乎没有溢价。</b>Superhost 均价 $134.2 vs 普通房东 $131.8,只贵 <em>1.8%</em>,中位数都是 $120。</li>
+      <li><b>按房型拆开才看出分化。</b>酒店房 Superhost 贵 <em>23%</em>、整租贵 <em>4.7%</em>;但独立房间反而 <em>便宜 3%</em>、合住便宜 1.3%。</li>
+      <li><b>结论:</b>Superhost 不靠"贵",而靠"同价更好"——口碑优势没有体现在标价上。</li>
+    </ul>
+    <figure>
+      <div class="legend"><span><i style="background:#B4B2A9"></i>普通房东</span><span><i style="background:#1D9E75"></i>Superhost</span></div>
+      <div class="chartbox" style="height:300px"><canvas id="cA1" role="img" aria-label="各房型下Superhost与普通房东的均价对比：酒店房Superhost溢价23%最明显，独立房间和合住Superhost反而略低。">酒店房 Superhost 溢价最明显,独立房间反而略低。</canvas></div>
+      <figcaption>图 5 · 各房型下 Superhost vs 普通房东 的均价。酒店房溢价最明显($129.7→$159.5),独立房间 / 合住的 Superhost 反而略低。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 08 房东商业化 -->
+  <section class="board reveal" style="--ac:var(--blue)">
+    <div class="board-head"><span class="tag tag-ext">进阶</span><span class="num">08</span></div>
+    <h2>房东越商业化,价格和合规怎么变</h2>
+    <div class="what" style="--ac:var(--blue)"><span class="wl">这一板块做什么</span><p>用 <code>calculated_host_listings_count</code> 把房东分成个人 / 小型 / 中型 / 大型职业四档,看价格、License 合规率、活跃度如何随之变化。</p></div>
+    <ul>
+      <li><b>大型职业房东(&gt;20 套,7,019 套)定价最高 $159</b>(比个人房东高 28%),但近 12 月评论仅 <em>1.5</em>、活跃度全场最低——像是"囤大量高价房挂着、低周转"。</li>
+      <li><b>合规率不是越大越高。</b>中型(6–20 套)最高 <em>24.7%</em>,大型职业反而掉到 13%,个人房东最低 9.8%。</li>
+      <li><b>真正在跑量的是小型 / 中型房东</b>(2–20 套),近 12 月评论约 6,远高于个人和大型职业。</li>
+    </ul>
+    <figure>
+      <div class="legend"><span><i style="background:#2F7FCC"></i>均价 (左轴)</span><span><i style="background:#D85A30"></i>License 合规率 (右轴)</span></div>
+      <div class="chartbox" style="height:300px"><canvas id="cA2" role="img" aria-label="按房东规模分档的均价柱与License率折线：大型职业房东均价159美元最高但合规率仅13%，中型房东合规率24.7%最高。">大型职业房东价高但合规率不高,中型房东最合规。</canvas></div>
+      <figcaption>图 6 · 按房东持有房源数分档的均价(柱)与 License 合规率(线)。价格随规模升,但合规率在中型房东见顶后回落。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 09 地理可达性 × 价格 -->
+  <section class="board reveal" style="--ac:var(--blue)">
+    <div class="board-head"><span class="tag tag-ext">进阶</span><span class="num">09</span></div>
+    <h2>地段值多少钱</h2>
+    <div class="what" style="--ac:var(--blue)"><span class="wl">这一板块做什么</span><p>用经纬度(两表都有)按 Haversine 公式现场算出到大学 / 旅游核心 / 华人社区 / 机场的综合便利性评分,再与价格做相关——这是合并经纬度与价格后第一次能算的关系。</p></div>
+    <ul>
+      <li><b>便利性与价格中等正相关</b>(Spearman <em>0.445</em>):便利性评分越高,均价大体从约 $127 抬到 $145+。</li>
+      <li><b>但相关只有 0.44</b>,说明价格不只看地段——同一便利度内部,价格差异依然很大。地段是定价的一个因子,而非全部。</li>
+    </ul>
+    <figure>
+      <div class="chartbox" style="height:300px"><canvas id="cA3" role="img" aria-label="地理便利性评分与均价的关系折线，整体随便利性升高而上行，从约127美元升到145美元以上。">便利性越高,均价整体上行。</canvas></div>
+      <figcaption>图 7 · 地理便利性评分 × 均价。横轴越往右越便利;均价整体上行,但波动说明并非线性。Spearman 相关 0.445。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 10 评分四维 × 价格 -->
+  <section class="board reveal" style="--ac:var(--blue)">
+    <div class="board-head"><span class="tag tag-ext">进阶</span><span class="num">10</span></div>
+    <h2>贵,贵在哪个评价维度</h2>
+    <div class="what" style="--ac:var(--blue)"><span class="wl">这一板块做什么</span><p>把价格与四个细分评分(总评 / 位置 / 清洁 / 性价比)分别求相关,看高价对应哪种口碑。</p></div>
+    <ul>
+      <li><b>四个维度与价格相关都很弱:</b>位置 <em>0.12</em> 最高 &gt; 总评 0.10 &gt; 清洁 0.07 &gt; 性价比 <em>0.02</em> 几乎为零。</li>
+      <li><b>位置相关最高,</b>呼应"地段值钱";<b>性价比(value)与价格几乎无关</b>——贵房源并没有换来更差的性价比口碑,标价大体被市场接受。</li>
+      <li><b>反直觉的一笔:</b>最低价档($93–106)的性价比评分(4.37)反而<em>低于</em>中价档($106–120,4.73)——最便宜并不等于体验最划算。</li>
+    </ul>
+    <figure>
+      <div class="chartbox" style="height:240px"><canvas id="cA4" role="img" aria-label="四个评分维度与价格的Spearman相关条形图：位置0.12最高，性价比0.02最低。">位置与价格相关最高,性价比几乎为零。</canvas></div>
+      <figcaption>图 8 · 各评分维度与价格的 Spearman 相关。位置最高、性价比最低,印证"高价主要买地段、而非更好体验口碑"。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 11 综合推荐榜 -->
+  <section class="board reveal" style="--ac:var(--blue)">
+    <div class="board-head"><span class="tag tag-ext">进阶</span><span class="num">11</span></div>
+    <h2>综合推荐榜(规则加权)</h2>
+    <div class="what" style="--ac:var(--blue)"><span class="wl">这一板块做什么</span><p>不动用 LLM,用规则把"便利性 0.30 + 总评 0.30 + 近期活跃 0.20 + 性价比 0.20"合成一个 0–1 的推荐分,给出推荐社区与房源,作为后续推荐网站的雏形。</p></div>
+    <ul>
+      <li><b>推荐分最高的社区高度集中在曼哈顿下城 / 中城:</b>Nolita、Chinatown、Little Italy、Theater District、Financial District、SoHo……各社区分数很接近(0.73–0.76),差距不大。</li>
+      <li><b>Top 房源</b>几乎全是 Midtown / Theater District / Financial District / Tribeca 的独立房间——便利、活跃、评分高,且不算最贵。</li>
+    </ul>
+    <figure>
+      <div class="chartbox" style="height:330px"><canvas id="cA5" role="img" aria-label="推荐分最高的社区条形图，Nolita、Chinatown、Little Italy、Theater District等曼哈顿社区领先。">推荐分最高的社区集中在曼哈顿下城/中城。</canvas></div>
+      <figcaption>图 9 · 推荐分最高的社区(房源数 ≥ 50)。分数集中在 0.73–0.76,差距小,可结合价格 / 偏好进一步筛选。权重为经验设定,可按"更看重便宜"或"更看重活跃"调整。</figcaption>
+    </figure>
+  </section>
+
+  <!-- 12 个性化推荐系统 -->
+  <section class="board reveal" style="--ac:var(--purple)">
+    <div class="board-head"><span class="tag tag-dec">推荐系统</span><span class="num">12</span></div>
+    <h2>按预算与身份推荐房源</h2>
+    <div class="what" style="--ac:var(--purple)"><span class="wl">这一板块做什么</span><p>把固定推荐分升级为个性化推荐：先按预算筛选，再根据用户身份切换目标地点和权重。学生看到学校，上班族看到商务区/公司，游客看到景点，高预算用户看到高端地段。</p></div>
+    <div class="reco-panel">
+      <div class="reco-grid">
+        <div class="reco-field"><label>最低预算 / night</label><input id="budgetMin" type="number" value="100" min="0"></div>
+        <div class="reco-field"><label>最高预算 / night</label><input id="budgetMax" type="number" value="160" min="0"></div>
+        <div class="reco-field"><label>用户身份</label>
+          <select id="persona">
+            <option value="student">学生 / Visiting Student</option>
+            <option value="worker">上班族 / Commuter</option>
+            <option value="tourist">游客 / Tourist</option>
+            <option value="luxury">高预算用户 / Comfort-first</option>
+            <option value="chinese">华人生活便利 / Chinese Community</option>
+          </select>
+        </div>
+        <div class="reco-field"><label id="targetLabel">目标地点</label>
+          <select id="target"></select>
+        </div>
+        <div class="reco-field"><label>房型偏好</label>
+          <select id="roomPref">
+            <option value="any">不限</option>
+            <option value="Entire home/apt">整租</option>
+            <option value="Private room">独立房间</option>
+          </select>
+        </div>
+        <div class="reco-field"><label>最低评分</label><input id="minRating" type="number" value="4.5" min="0" max="5" step="0.1"></div>
+      </div>
+      <button class="reco-btn" id="runReco">生成推荐</button>
+      <div class="reco-explain" id="recoExplain">选择预算和身份后，系统会自动调整权重并输出推荐结果。</div>
+      <table class="reco-table">
+        <thead><tr><th>Rank</th><th>推荐社区 / 房型</th><th>均价</th><th>评分</th><th>推荐分</th><th>推荐理由</th></tr></thead>
+        <tbody id="recoBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- 延伸洞察 -->
+  <section class="board reveal" style="--ac:var(--coral)">
+    <div class="board-head"><span class="tag tag-bot">洞察</span><span class="num">延伸</span></div>
+    <h2>延伸部分的四条结论</h2>
+    <div class="what" style="--ac:var(--coral)"><span class="wl">这一板块做什么</span><p>把合并数据后新增的四块交叉分析收敛成可汇报的关键结论。</p></div>
+    <div class="ins">
+      <div class="item"><div class="n">1</div><p><b>Superhost 靠口碑不靠溢价。</b>整体只贵 1.8%、中位同价;唯一明显溢价的是酒店房(+23%)——超赞房东标签更多体现在"同价更好",而非更高标价。</p></div>
+      <div class="item"><div class="n">2</div><p><b>大型职业房东是"高价低周转"群体。</b>定价最高(+28%)、活跃度最低(近年评论仅 1.5),且 License 合规率(13%)还不如中型房东(24.7%)。这正是"运营与监管"故事线的现成切入点。</p></div>
+      <div class="item"><div class="n">3</div><p><b>地段值钱,但不是全部。</b>便利性与价格 Spearman 0.445;评分维度里位置与价格相关最高(0.12),而性价比几乎为零(0.02)——高价主要买的是位置,且没有换来更差的性价比口碑。</p></div>
+      <div class="item"><div class="n">4</div><p><b>推荐价值集中在曼哈顿下城 / 中城。</b>规则加权推荐榜里 Nolita、Chinatown、Theater District、FiDi 等社区领先,但彼此分数接近,真正区分还需叠加个人偏好与预算。</p></div>
+    </div>
+  </section>
+
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function(){
+  if(!window.Chart) return;
+  Chart.defaults.font.family = "'Noto Sans SC', sans-serif";
+  Chart.defaults.color = "#5F584C";
+  var tc = "#6E675C", gc = "rgba(39,35,28,.08)";
+
+  // 图1 价格分布
+  new Chart(document.getElementById('c1'),{
+    type:'bar',
+    data:{labels:['$93.5','$94','$106','$115','$120','$126','$131','$199','$245.5','$300'],
+      datasets:[{label:'房源数',data:[2182,3633,1856,6712,15535,805,135,2546,1757,1284],backgroundColor:'#2F7FCC',borderRadius:3,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){return x.parsed.y.toLocaleString()+' 个房源';}}}},
+      scales:{x:{ticks:{color:tc,autoSkip:false,maxRotation:45,minRotation:45},grid:{display:false}},
+        y:{ticks:{color:tc,callback:function(v){return v.toLocaleString();}},grid:{color:gc},title:{display:true,text:'房源数',color:tc}}}}
+  });
+
+  // 图2 均价 by 区 x 房型
+  new Chart(document.getElementById('cp'),{
+    type:'bar',
+    data:{labels:['Manhattan','Brooklyn','Queens','Bronx','Staten Island'],
+      datasets:[
+        {label:'整租房源',data:[147.0,138.8,132.4,143.2,148.5],backgroundColor:'#1D9E75',borderRadius:3},
+        {label:'独立房间',data:[123.1,121.0,113.7,121.8,113.0],backgroundColor:'#7F77DD',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){return x.dataset.label+': $'+x.parsed.y.toFixed(0);}}}},
+      scales:{x:{ticks:{color:tc},grid:{display:false}},
+        y:{ticks:{color:tc,callback:function(v){return '$'+v;}},grid:{color:gc},title:{display:true,text:'均价 (USD)',color:tc}}}}
+  });
+
+  // 图3 房型构成 by 区
+  new Chart(document.getElementById('c2'),{
+    type:'bar',
+    data:{labels:['Manhattan','Brooklyn','Queens','Bronx','Staten Island'],
+      datasets:[
+        {label:'整租',data:[64.2,48.3,36.0,37.5,45.5],backgroundColor:'#1D9E75'},
+        {label:'独立房间',data:[33.5,50.7,62.4,62.4,53.4],backgroundColor:'#7F77DD'},
+        {label:'酒店/合住',data:[2.2,1.0,1.6,0.1,1.1],backgroundColor:'#B4B2A9'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){return x.dataset.label+': '+x.parsed.x.toFixed(1)+'%';}}}},
+      scales:{x:{stacked:true,min:0,max:100,ticks:{color:tc,callback:function(v){return v+'%';}},grid:{color:gc}},
+        y:{stacked:true,ticks:{color:tc},grid:{display:false}}}}
+  });
+
+  // 图5 Superhost 溢价 by 房型
+  new Chart(document.getElementById('cA1'),{
+    type:'bar',
+    data:{labels:['整租','酒店房','独立房间','合住'],
+      datasets:[
+        {label:'普通房东',data:[141.5,129.7,120.8,116.9],backgroundColor:'#B4B2A9',borderRadius:3},
+        {label:'Superhost',data:[148.2,159.5,117.2,115.4],backgroundColor:'#1D9E75',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){return x.dataset.label+': $'+x.parsed.y.toFixed(1);}}}},
+      scales:{x:{ticks:{color:tc},grid:{display:false}},
+        y:{ticks:{color:tc,callback:function(v){return '$'+v;}},grid:{color:gc},title:{display:true,text:'均价 (USD)',color:tc}}}}
+  });
+
+  // 图6 房东商业化：均价(柱)+License率(线)
+  new Chart(document.getElementById('cA2'),{
+    data:{labels:['个人(1套)','小型(2-5)','中型(6-20)','大型职业(>20)'],
+      datasets:[
+        {type:'bar',label:'均价',data:[124.3,127.9,128.8,159.2],backgroundColor:'#2F7FCC',borderRadius:3,yAxisID:'y',order:2},
+        {type:'line',label:'License率',data:[9.8,17.9,24.7,13.0],borderColor:'#D85A30',backgroundColor:'#D85A30',tension:.3,pointRadius:4,yAxisID:'y1',order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){return x.dataset.type==='line'?'License率: '+x.parsed.y+'%':'均价: $'+x.parsed.y.toFixed(0);}}}},
+      scales:{x:{ticks:{color:tc},grid:{display:false}},
+        y:{position:'left',ticks:{color:tc,callback:function(v){return '$'+v;}},grid:{color:gc},title:{display:true,text:'均价 (USD)',color:tc}},
+        y1:{position:'right',min:0,max:30,ticks:{color:'#D85A30',callback:function(v){return v+'%';}},grid:{display:false},title:{display:true,text:'License 率',color:'#D85A30'}}}}
+  });
+
+  // 图7 地理便利性 × 均价
+  new Chart(document.getElementById('cA3'),{
+    type:'line',
+    data:{labels:['2.7','2.8','2.9','3.0','3.2','3.4','3.6','3.8','4.0','4.1'],
+      datasets:[{label:'均价',data:[131.2,127.1,132.2,132.0,136.8,149.4,134.6,141.7,139.9,144.7],
+        borderColor:'#6A5ECF',backgroundColor:'rgba(106,94,207,.12)',fill:true,tension:.3,pointRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){return '均价 $'+x.parsed.y.toFixed(0);}}}},
+      scales:{x:{ticks:{color:tc},grid:{display:false},title:{display:true,text:'地理便利性评分 (越右越便利)',color:tc}},
+        y:{ticks:{color:tc,callback:function(v){return '$'+v;}},grid:{color:gc},title:{display:true,text:'均价 (USD)',color:tc}}}}
+  });
+
+  // 图8 评分维度 × 价格 相关
+  new Chart(document.getElementById('cA4'),{
+    type:'bar',
+    data:{labels:['位置 location','总评 rating','清洁 cleanliness','性价比 value'],
+      datasets:[{label:'与价格相关',data:[0.120,0.099,0.069,0.020],backgroundColor:'#2F7FCC',borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){return 'Spearman '+x.parsed.x.toFixed(3);}}}},
+      scales:{x:{min:0,max:.2,ticks:{color:tc},grid:{color:gc},title:{display:true,text:'与价格的 Spearman 相关',color:tc}},
+        y:{ticks:{color:tc},grid:{display:false}}}}
+  });
+
+  // 图9 推荐分最高的社区
+  new Chart(document.getElementById('cA5'),{
+    type:'bar',
+    data:{labels:['Nolita','Chinatown','Little Italy','Theater District','Financial District','SoHo','Gramercy','Midtown','Greenwich Village','Battery Park City'],
+      datasets:[{label:'推荐分',data:[0.764,0.747,0.745,0.741,0.739,0.739,0.738,0.738,0.737,0.737],backgroundColor:'#1D9E75',borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(x){return '推荐分 '+x.parsed.x.toFixed(3);}}}},
+      scales:{x:{min:.70,max:.78,ticks:{color:tc},grid:{color:gc},title:{display:true,text:'平均推荐分 (0–1)',color:tc}},
+        y:{ticks:{color:tc},grid:{display:false}}}}
+  });
+
+  // 个性化推荐系统：预算筛选 + 用户身份权重
+  var recoItems = [
+    {name:'Nolita', room:'Private room', price:126, rating:4.86, transit:0.92, student:0.88, commute:0.82, comfort:0.62, tourist:0.86, chinese:0.72, active:0.78, value:0.82},
+    {name:'Chinatown', room:'Private room', price:120, rating:4.82, transit:0.90, student:0.84, commute:0.78, comfort:0.58, tourist:0.80, chinese:0.98, active:0.76, value:0.88},
+    {name:'Little Italy', room:'Private room', price:128, rating:4.83, transit:0.88, student:0.82, commute:0.76, comfort:0.60, tourist:0.84, chinese:0.75, active:0.74, value:0.80},
+    {name:'Theater District', room:'Private room', price:135, rating:4.80, transit:0.95, student:0.62, commute:0.92, comfort:0.65, tourist:0.98, chinese:0.45, active:0.80, value:0.74},
+    {name:'Financial District', room:'Private room', price:132, rating:4.81, transit:0.90, student:0.76, commute:0.88, comfort:0.68, tourist:0.78, chinese:0.62, active:0.79, value:0.76},
+    {name:'SoHo', room:'Entire home/apt', price:185, rating:4.87, transit:0.86, student:0.80, commute:0.78, comfort:0.86, tourist:0.88, chinese:0.58, active:0.68, value:0.58},
+    {name:'Midtown', room:'Entire home/apt', price:147, rating:4.78, transit:0.94, student:0.62, commute:0.96, comfort:0.76, tourist:0.95, chinese:0.42, active:0.62, value:0.70},
+    {name:'Williamsburg', room:'Entire home/apt', price:139, rating:4.84, transit:0.74, student:0.60, commute:0.68, comfort:0.78, tourist:0.64, chinese:0.38, active:0.82, value:0.77},
+    {name:'Bedford-Stuyvesant', room:'Private room', price:112, rating:4.72, transit:0.62, student:0.55, commute:0.58, comfort:0.55, tourist:0.48, chinese:0.32, active:0.84, value:0.90},
+    {name:'Flushing', room:'Private room', price:114, rating:4.70, transit:0.56, student:0.35, commute:0.48, comfort:0.55, tourist:0.36, chinese:1.00, active:0.72, value:0.86},
+    {name:'Upper West Side', room:'Entire home/apt', price:160, rating:4.88, transit:0.82, student:0.92, commute:0.72, comfort:0.86, tourist:0.78, chinese:0.35, active:0.65, value:0.66},
+    {name:'Greenwich Village', room:'Private room', price:137, rating:4.86, transit:0.88, student:0.96, commute:0.78, comfort:0.72, tourist:0.82, chinese:0.56, active:0.75, value:0.77}
+  ];
+  var targetOptionsByPersona = {
+    student:{label:'目标学校', options:[
+      {value:'nyu', label:'NYU / Downtown'},
+      {value:'columbia', label:'Columbia / Upper Manhattan'},
+      {value:'baruch', label:'Baruch / Gramercy'},
+      {value:'newschool', label:'The New School / Greenwich Village'},
+      {value:'fordham', label:'Fordham Lincoln Center'}
+    ]},
+    worker:{label:'目标通勤地点', options:[
+      {value:'midtown', label:'Midtown / Office Core'},
+      {value:'fidi', label:'Financial District / Wall Street'},
+      {value:'hudson', label:'Hudson Yards'},
+      {value:'flatiron', label:'Flatiron / Union Square'},
+      {value:'brooklyn_office', label:'Downtown Brooklyn'}
+    ]},
+    tourist:{label:'目标景点', options:[
+      {value:'times', label:'Times Square / Broadway'},
+      {value:'centralpark', label:'Central Park'},
+      {value:'soho', label:'SoHo / Shopping'},
+      {value:'museum', label:'Museum Mile'},
+      {value:'statue', label:'Statue of Liberty / Downtown'}
+    ]},
+    luxury:{label:'偏好高端地段', options:[
+      {value:'soho_lux', label:'SoHo / Nolita'},
+      {value:'tribeca', label:'Tribeca'},
+      {value:'uws_lux', label:'Upper West Side'},
+      {value:'ues_lux', label:'Upper East Side'},
+      {value:'chelsea', label:'Chelsea / West Village'}
+    ]},
+    chinese:{label:'华人生活圈', options:[
+      {value:'chinatown', label:'Manhattan Chinatown'},
+      {value:'flushing', label:'Flushing'},
+      {value:'sunsetpark', label:'Sunset Park'},
+      {value:'elmhurst', label:'Elmhurst'},
+      {value:'asiangrocery', label:'Asian Grocery / H Mart Area'}
+    ]}
+  };
+  var personaWeights = {
+    student:{label:'学生：预算、目标学校距离、地铁便利最重要', weights:{value:.25, student:.30, transit:.20, rating:.10, active:.10, comfort:.05}},
+    worker:{label:'上班族：到目标办公区通勤与地铁优先，其次看稳定性和评分', weights:{commute:.35, transit:.25, rating:.15, active:.10, comfort:.10, value:.05}},
+    tourist:{label:'游客：目标景点可达性、地铁和近期活跃度优先', weights:{tourist:.35, transit:.25, active:.15, rating:.10, value:.10, comfort:.05}},
+    luxury:{label:'高预算用户：高端地段、舒适性和评分优先，弱化交通与价格', weights:{comfort:.35, rating:.25, luxuryArea:.20, active:.10, transit:.05, value:.05}},
+    chinese:{label:'华人生活便利：华人社区/亚洲生活圈、地铁与性价比优先', weights:{chinese:.35, transit:.20, value:.15, rating:.15, active:.10, comfort:.05}}
+  };
+  function ratingNorm(r){ return Math.max(0, Math.min(1, (r-4.0)/1.0)); }
+  function budgetFit(price, minB, maxB){
+    if(price>=minB && price<=maxB) return 1;
+    var gap = price < minB ? minB-price : price-maxB;
+    return Math.max(0, 1-gap/80);
+  }
+  function applyTargetBoost(vals, item, target){
+    var n = item.name;
+    // 学校：不同学校对应不同社区
+    if(target==='nyu' || target==='newschool') vals.student = Math.max(vals.student, ['Greenwich Village','Nolita','Chinatown','SoHo'].includes(n)?0.96:vals.student);
+    if(target==='columbia') vals.student = Math.max(vals.student, n==='Upper West Side'?0.96:vals.student*.86);
+    if(target==='baruch') vals.student = Math.max(vals.student, ['Gramercy','Midtown','Theater District'].includes(n)?0.94:vals.student*.90);
+    if(target==='fordham') vals.student = Math.max(vals.student, ['Upper West Side','Midtown','Theater District'].includes(n)?0.90:vals.student*.88);
+
+    // 上班族：目标办公区 / 商务区
+    if(target==='midtown' || target==='hudson') vals.commute = Math.max(vals.commute, ['Midtown','Theater District','Chelsea'].includes(n)?0.98:vals.commute);
+    if(target==='fidi') vals.commute = Math.max(vals.commute, ['Financial District','Tribeca','Chinatown'].includes(n)?0.98:vals.commute);
+    if(target==='flatiron') vals.commute = Math.max(vals.commute, ['Gramercy','Greenwich Village','SoHo'].includes(n)?0.95:vals.commute);
+    if(target==='brooklyn_office') vals.commute = Math.max(vals.commute, ['Williamsburg','Bedford-Stuyvesant','Financial District'].includes(n)?0.88:vals.commute);
+
+    // 游客：目标景点
+    if(target==='times') vals.tourist = Math.max(vals.tourist, ['Theater District','Midtown'].includes(n)?0.99:vals.tourist);
+    if(target==='centralpark' || target==='museum') vals.tourist = Math.max(vals.tourist, ['Upper West Side','Midtown'].includes(n)?0.94:vals.tourist);
+    if(target==='soho') vals.tourist = Math.max(vals.tourist, ['SoHo','Nolita','Little Italy','Chinatown'].includes(n)?0.96:vals.tourist);
+    if(target==='statue') vals.tourist = Math.max(vals.tourist, ['Financial District','Battery Park City','Tribeca'].includes(n)?0.97:vals.tourist);
+
+    // 高预算：高端地段偏好
+    vals.luxuryArea = item.comfort;
+    if(target==='soho_lux') vals.luxuryArea = Math.max(vals.luxuryArea, ['SoHo','Nolita','Little Italy'].includes(n)?0.98:vals.luxuryArea);
+    if(target==='tribeca') vals.luxuryArea = Math.max(vals.luxuryArea, ['Tribeca','Financial District','SoHo'].includes(n)?0.98:vals.luxuryArea);
+    if(target==='uws_lux') vals.luxuryArea = Math.max(vals.luxuryArea, n==='Upper West Side'?0.98:vals.luxuryArea);
+    if(target==='ues_lux') vals.luxuryArea = Math.max(vals.luxuryArea, ['Upper West Side','Midtown'].includes(n)?0.86:vals.luxuryArea);
+    if(target==='chelsea') vals.luxuryArea = Math.max(vals.luxuryArea, ['Greenwich Village','SoHo','Midtown'].includes(n)?0.88:vals.luxuryArea);
+
+    // 华人生活圈
+    if(target==='chinatown') vals.chinese = Math.max(vals.chinese, ['Chinatown','Little Italy','Nolita'].includes(n)?1:vals.chinese);
+    if(target==='flushing') vals.chinese = Math.max(vals.chinese, n==='Flushing'?1:vals.chinese*.85);
+    if(target==='sunsetpark' || target==='elmhurst' || target==='asiangrocery') vals.chinese = Math.max(vals.chinese, ['Flushing','Chinatown'].includes(n)?0.92:vals.chinese*.90);
+  }
+  function scoreItem(item, persona, minB, maxB, target){
+    var vals = Object.assign({}, item);
+    vals.rating = ratingNorm(item.rating);
+    vals.value = (item.value*.65 + budgetFit(item.price,minB,maxB)*.35);
+    applyTargetBoost(vals, item, target);
+    var weights = personaWeights[persona].weights, s=0;
+    Object.keys(weights).forEach(function(k){ s += (vals[k]||0)*weights[k]; });
+    return s;
+  }
+  function reasonFor(item, persona){
+    var parts=[];
+    if(persona==='student') parts.push('适合学生：学校/市中心可达性较好，预算压力较低');
+    if(persona==='worker') parts.push('适合上班族：通勤与地铁便利性较强');
+    if(persona==='tourist') parts.push('适合游客：靠近旅游核心或交通节点');
+    if(persona==='luxury') parts.push('适合高预算用户：更重视舒适性、整租和评分');
+    if(persona==='chinese') parts.push('适合华人生活便利：靠近 Chinatown/Flushing 或亚洲生活圈');
+    parts.push(item.room==='Entire home/apt'?'整租隐私性更好':'独立房间性价比更高');
+    parts.push('均价 $'+item.price+'，评分 '+item.rating.toFixed(2));
+    return parts.join('；')+'。';
+  }
+  function updateTargetOptions(){
+    var persona = document.getElementById('persona').value;
+    var target = document.getElementById('target');
+    var cfg = targetOptionsByPersona[persona];
+    document.getElementById('targetLabel').textContent = cfg.label;
+    target.innerHTML = cfg.options.map(function(o){ return '<option value="'+o.value+'">'+o.label+'</option>'; }).join('');
+  }
+  function runReco(){
+    var minB = Number(document.getElementById('budgetMin').value||0);
+    var maxB = Number(document.getElementById('budgetMax').value||9999);
+    var persona = document.getElementById('persona').value;
+    var target = document.getElementById('target').value;
+    var roomPref = document.getElementById('roomPref').value;
+    var minRating = Number(document.getElementById('minRating').value||0);
+    var strict = recoItems.filter(function(x){return x.price>=minB && x.price<=maxB && x.rating>=minRating && (roomPref==='any'||x.room===roomPref);});
+    var pool = strict.length ? strict : recoItems.filter(function(x){return x.rating>=minRating && (roomPref==='any'||x.room===roomPref);});
+    var ranked = pool.map(function(x){return Object.assign({}, x, {score:scoreItem(x, persona, minB, maxB, target)});})
+      .sort(function(a,b){return b.score-a.score;}).slice(0,5);
+    var body = document.getElementById('recoBody');
+    body.innerHTML = ranked.map(function(x,i){return '<tr><td>'+(i+1)+'</td><td><b>'+x.name+'</b><br><span class="reason">'+x.room+'</span></td><td>$'+x.price+'</td><td>'+x.rating.toFixed(2)+'</td><td><span class="score-pill">'+x.score.toFixed(3)+'</span></td><td class="reason">'+reasonFor(x,persona)+'</td></tr>';}).join('');
+    document.getElementById('recoExplain').innerHTML = personaWeights[persona].label + '。当前先按预算 $'+minB+'–$'+maxB+' 和房型/评分筛选，再根据身份对应的目标地点计算个性化推荐分。' + (strict.length?'':' 注意：严格预算内无足够结果，已放宽预算做近似推荐。');
+  }
+  var personaSelect=document.getElementById('persona'); if(personaSelect){ personaSelect.addEventListener('change', function(){ updateTargetOptions(); runReco(); }); }
+  var rb=document.getElementById('runReco'); if(rb){ rb.addEventListener('click', runReco); updateTargetOptions(); runReco(); }
+
+})();
+</script>
+</body>
+</html>
